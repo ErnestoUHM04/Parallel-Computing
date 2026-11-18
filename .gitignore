@@ -1,5 +1,32 @@
+# Bibliografía y material externo
 bibliografia/
 CISCO/
 Portada/
 lectures/
+
+# Archivos del sistema
+.DS_Store
+
+# Calificaciones
 Calificaciones1.pdf
+
+# Documentos de word
+*.docx
+*.doc
+~$*.doc*
+
+# Ejecutables
+*.exe
+C3/fourier_final
+C4/fourier_omar
+C4/hilos_fourier
+E5/mate
+P2/crea
+P2/hijos1
+P2/hijos2
+P2/practica2
+P4/crea
+P4/practica4
+P5/practica5
+P7/Cliente_Datagrama
+P7/Servidor_Datagrama
