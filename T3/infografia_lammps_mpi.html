@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infografía: LAMMPS y Paralelismo con MPI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-canvas: #060b16;
+      --bg-card: #0e172a;
+      --bg-card-inner: #15223b;
+      --border-soft: rgba(148, 163, 184, 0.22);
+      --border-cyan: rgba(56, 189, 248, 0.55);
+      --accent-gold: #facc15;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #3b82f6;
+      --accent-indigo: #818cf8;
+      --accent-emerald: #10b981;
+      --accent-rose: #fb7185;
+      --text-white: #ffffff;
+      --text-light: #e2e8f0;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #02050a;
+      color: var(--text-white);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.38;
+      padding: 20px 16px 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Barra flotante interactiva (Se oculta automáticamente al exportar PDF) */
+    .toolbar {
+      position: sticky;
+      top: 12px;
+      z-index: 1000;
+      background: rgba(14, 23, 42, 0.94);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-cyan);
+      border-radius: 999px;
+      padding: 8px 18px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+    }
+
+    .toolbar-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent-blue), #4f46e5);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 7px 15px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-soft);
+    }
+
+    /* Contenedor del Póster */
+    .poster {
+      width: 1060px;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(59, 130, 246, 0.16), transparent 34%),
+        radial-gradient(circle at 85% 42%, rgba(250, 204, 21, 0.1), transparent 36%),
+        radial-gradient(circle at 20% 85%, rgba(16, 185, 129, 0.12), transparent 35%),
+        var(--bg-canvas);
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      padding: 26px 32px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75);
+    }
+
+    body.editing-active [contenteditable="true"]:hover {
+      outline: 1px dashed var(--accent-gold);
+      outline-offset: 2px;
+      border-radius: 4px;
+      cursor: text;
+    }
+
+    body.editing-active [contenteditable="true"]:focus {
+      outline: 2px solid var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.1);
+      border-radius: 4px;
+    }
+
+    /* CINTILLO DE INTEGRANTES ARRIBA */
+    .authors-bar {
+      background: linear-gradient(90deg, rgba(30, 58, 138, 0.55), rgba(15, 23, 42, 0.9), rgba(30, 58, 138, 0.55));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 9px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .authors-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .authors-names {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      letter-spacing: 0.01em;
+    }
+
+    /* ENCABEZADO PRINCIPAL CON IMAGEN OFICIAL LAMMPS */
+    .hero-header {
+      background: linear-gradient(135deg, #0b1326 0%, #111e38 100%);
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      border-radius: 16px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+      align-items: center;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .badge.gold {
+      background: rgba(250, 204, 21, 0.16);
+      color: var(--accent-gold);
+      border-color: rgba(250, 204, 21, 0.45);
+    }
+
+    /* TÍTULO 100% VISIBLE EN COLOR SÓLIDO DE ALTO CONTRASTE */
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.15rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.1;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-title .highlight-gold {
+      color: var(--accent-gold);
+    }
+
+    .hero-title .highlight-cyan {
+      color: var(--accent-cyan);
+    }
+
+    .hero-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-light);
+      font-weight: 400;
+    }
+
+    .hero-logo-box {
+      background: #000000;
+      border: 2px solid var(--accent-gold);
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 0 24px rgba(250, 204, 21, 0.2);
+    }
+
+    .hero-logo-box img {
+      width: 100%;
+      height: 112px;
+      object-fit: contain;
+      border-radius: 6px;
+      display: block;
+    }
+
+    .hero-logo-caption {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.67rem;
+      color: var(--accent-gold);
+      margin-top: 5px;
+    }
+
+    /* TÍTULOS DE SECCIÓN */
+    .sec-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .sec-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 800;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-cyan);
+      color: #04101f;
+      flex-shrink: 0;
+    }
+
+    .sec-num.gold {
+      background: var(--accent-gold);
+      color: #1e1b04;
+    }
+
+    .sec-num.emerald {
+      background: var(--accent-emerald);
+      color: #021a12;
+    }
+
+    .sec-num.indigo {
+      background: var(--accent-indigo);
+      color: #0c0a24;
+    }
+
+    .sec-heading {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .sec-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border-cyan), transparent);
+    }
+
+    /* SECCIÓN 1: TARJETAS VISUALES CON IMÁGENES OFICIALES + TEXTO CONCISO */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .visual-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-top: 3px solid var(--accent-cyan);
+      border-radius: 14px;
+      padding: 13px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .visual-card.gold-top {
+      border-top-color: var(--accent-gold);
+    }
+
+    .visual-card.rose-top {
+      border-top-color: var(--accent-rose);
+    }
+
+    .card-img-wrap {
+      width: 100%;
+      height: 122px;
+      border-radius: 9px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      margin-bottom: 10px;
+      position: relative;
+      background: #000;
+    }
+
+    .card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .img-tag {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      background: rgba(6, 11, 22, 0.88);
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      margin-bottom: 5px;
+    }
+
+    .card-text {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      margin-bottom: 8px;
+    }
+
+    .bullet-compact {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .bullet-compact li {
+      font-size: 0.76rem;
+      color: var(--text-light);
+      padding-left: 13px;
+      position: relative;
+    }
+
+    .bullet-compact li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    /* SECCIÓN 2: IMPLEMENTACIÓN MPI CON IMÁGENES OFICIALES DE DOCS.LAMMPS.ORG */
+    .mpi-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .domain-images-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
+    .domain-figure {
+      background: #050912;
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      border-radius: 10px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .domain-figure img {
+      width: 100%;
+      height: 145px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #000;
+    }
+
+    .domain-caption {
+      font-size: 0.73rem;
+      color: var(--text-light);
+      margin-top: 5px;
+      font-weight: 600;
+    }
+
+    .domain-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    /* Diagrama de Flujo MPI Compacto */
+    .pipeline-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .pipe-step {
+      background: var(--bg-card-inner);
+      border: 1px solid var(--border-soft);
+      border-left: 3px solid var(--accent-cyan);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .pipe-step.gold {
+      border-left-color: var(--accent-gold);
+    }
+
+    .pipe-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.67rem;
+      color: var(--accent-gold);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .pipe-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .pipe-desc {
+      font-size: 0.71rem;
+      color: var(--text-light);
+    }
+
+    /* SECCIÓN 3: VENTAJAS DE MPI (TABLA + GRÁFICA + GALERÍA) */
+    .advantages-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.76rem;
+      margin-top: 4px;
+    }
+
+    .comp-table th {
+      background: var(--bg-card-inner);
+      color: var(--accent-gold);
+      font-family: 'Space Grotesk', sans-serif;
+      text-align: left;
+      padding: 7px 9px;
+      border-bottom: 2px solid rgba(250, 204, 21, 0.4);
+    }
+
+    .comp-table td {
+      padding: 6px 9px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      color: var(--text-light);
+    }
+
+    .comp-table td:first-child {
+      font-weight: 700;
+      color: #fff;
+      width: 25%;
+    }
+
+    .bad-cell {
+      color: #fda4af;
+    }
+
+    .good-cell {
+      color: #6ee7b7;
+      font-weight: 600;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card-inner);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 9px;
+      padding: 7px 10px;
+      text-align: center;
+    }
+
+    .kpi-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #34d399;
+    }
+
+    .kpi-txt {
+      font-size: 0.68rem;
+      color: var(--text-light);
+    }
+
+    .speedup-box {
+      background: #070d19;
+      border: 1px solid var(--border-soft);
+      border-radius: 9px;
+      padding: 8px 11px;
+    }
+
+    .bar-item {
+      display: grid;
+      grid-template-columns: 74px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.71rem;
+      margin-bottom: 5px;
+    }
+
+    .bar-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .bar-bg {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald));
+      border-radius: 99px;
+    }
+
+    /* SECCIÓN 4: REFERENCIAS EN FORMATO IEEE Y FORMATO APA */
+    .refs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .ref-box {
+      background: rgba(14, 23, 42, 0.9);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 10px 13px;
+    }
+
+    .ref-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ref-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.67rem;
+      color: var(--text-light);
+    }
+
+    /* IMPRESIÓN / EXPORTACIÓN PDF EN 1 SOLA PÁGINA */
+    @media print {
+      @page {
+        size: 11in 16.2in;
+        margin: 0;
+      }
+      html, body {
+        width: 100%;
+        background: var(--bg-canvas);
+        padding: 0;
+        margin: 0;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .poster {
+        width: 1060px;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 20px 26px;
+        zoom: 0.88;
+      }
+    }
+  </style>
+</head>
+<body class="editing-active">
+
+  <!-- Barra de Herramientas Interactiva -->
+  <div class="toolbar">
+    <div class="toolbar-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Modo Editable Activo (Haz clic en cualquier texto para editarlo)</span>
+    </div>
+    <button class="btn btn-secondary" id="toggleEditBtn" onclick="toggleEditable()">
+      Bloquear Edición
+    </button>
+    <button class="btn" onclick="window.print()">
+      Exportar a PDF
+    </button>
+  </div>
+
+  <main class="poster">
+
+    <!-- CINTILLO SUPERIOR: INTEGRANTES -->
+    <div class="authors-bar">
+      <span class="authors-label" contenteditable="true">ESCOM - IPN · Cómputo Paralelo · Integrantes:</span>
+      <span class="authors-names" contenteditable="true">González Hernández Diego - Hernández Martínez Ernesto Ulises</span>
+    </div>
+
+    <!-- HERO HEADER CON IMAGEN OFICIAL DE LAMMPS -->
+    <header class="hero-header">
+      <div>
+        <div class="hero-badges">
+          <span class="badge gold" contenteditable="true">Sandia National Labs</span>
+          <span class="badge" contenteditable="true">Dinámica Molecular (C++ / MPI)</span>
+          <span class="badge" contenteditable="true">Supercómputo HPC</span>
+        </div>
+        <h1 class="hero-title" contenteditable="true">
+          <span class="highlight-gold">LAMMPS</span>: Simulación Atómica y Paralelismo con <span class="highlight-cyan">MPI</span>
+        </h1>
+        <p class="hero-subtitle" contenteditable="true">
+          <strong>Large-scale Atomic/Molecular Massively Parallel Simulator</strong> — Herramienta líder para modelar materiales a escala atómica mediante descomposición espacial de dominios y paso de mensajes.
+        </p>
+      </div>
+      <div class="hero-logo-box">
+        <img src="assets/lammps_logo.jpg" alt="Logo Oficial LAMMPS Simulación Atómica" />
+        <span class="hero-logo-caption" contenteditable="true">Malla cristalina atómica oficial de LAMMPS (lammps.org)</span>
+      </div>
+    </header>
+
+    <!-- SECCIÓN 01: ¿QUÉ ES, QUÉ HACE Y QUÉ PROBLEMA RESUELVE? -->
+    <div class="sec-bar">
+      <div class="sec-num">01</div>
+      <h2 class="sec-heading" contenteditable="true">¿Qué es LAMMPS, Qué Hace y Qué Problema Resuelve?</h2>
+      <div class="sec-line"></div>
+    </div>
+
+    <section class="grid-3">
+      <!-- Tarjeta 1 -->
+      <article class="visual-card">
+        <div>
+          <div class="card-img-wrap">
+            <img src="assets/membrane1.jpg" alt="Simulación de Membrana Molecular en LAMMPS" />
+            <span class="img-tag">Galería Oficial LAMMPS</span>
+          </div>
+          <h3 class="card-title" contenteditable="true">1. ¿Qué es LAMMPS?</h3>
+          <p class="card-text" contenteditable="true">
+            Simulador clásico de <strong>Dinámica Molecular (MD)</strong> de código abierto, creado por <em>Sandia National Laboratories</em> para clústeres de memoria distribuida.
+          </p>
+        </div>
+        <ul class="bullet-compact">
+          <li contenteditable="true"><strong>Multiescala:</strong> Modela átomos, polímeros, proteínas, metales y sistemas granulares.</li>
+          <li contenteditable="true"><strong>Modular:</strong> +1,000 potenciales de fuerza (Lennard-Jones, EAM, ReaxFF, ML-IAP).</li>
+        </ul>
+      </article>
+
+      <!-- Tarjeta 2 -->
+      <article class="visual-card gold-top">
+        <div>
+          <div class="card-img-wrap">
+            <img src="assets/dendrite.jpg" alt="Dinámica Molecular de Dendritas e Hidratación" />
+            <span class="img-tag">Trayectorias 3D (Δt = 1 fs)</span>
+          </div>
+          <h3 class="card-title" contenteditable="true">2. ¿Qué hace exactamente?</h3>
+          <p class="card-text" contenteditable="true">
+            Integra las <strong>ecuaciones de movimiento de Newton</strong> (<em>F = m · a = −∇U</em>) paso a paso para millones de partículas interactuantes.
+          </p>
+        </div>
+        <ul class="bullet-compact">
+          <li contenteditable="true"><strong>Velocity-Verlet:</strong> Actualiza posiciones y velocidades en pasos de femtosegundos (10⁻¹⁵ s).</li>
+          <li contenteditable="true"><strong>Listas de Verlet:</strong> Agrupa vecinos dentro de un radio de corte <em>r<sub>c</sub></em> para acelerar cálculos.</li>
+        </ul>
+      </article>
+
+      <!-- Tarjeta 3 -->
+      <article class="visual-card rose-top">
+        <div>
+          <div class="card-img-wrap">
+            <img src="assets/bicrystal.jpg" alt="Deformación y Fractura de Bicristal en LAMMPS" />
+            <span class="img-tag">Deformación de Materiales</span>
+          </div>
+          <h3 class="card-title" contenteditable="true">3. ¿Qué problema resuelve?</h3>
+          <p class="card-text" contenteditable="true">
+            Rompe la <strong>explosión computacional O(N²)</strong> del problema de N-cuerpos y el límite de RAM de una sola computadora.
+          </p>
+        </div>
+        <ul class="bullet-compact">
+          <li contenteditable="true"><strong>Complejidad lineal:</strong> Reduce el costo de O(N²) a <strong>O(N / P)</strong> usando listas y procesos MPI.</li>
+          <li contenteditable="true"><strong>Laboratorio virtual:</strong> Predice fusión, fracturas y catálisis imposibles de medir físicamente.</li>
+        </ul>
+      </article>
+    </section>
+
+    <!-- SECCIÓN 02: IMPLEMENTACIÓN DE MPI EN LAMMPS -->
+    <div class="sec-bar">
+      <div class="sec-num gold">02</div>
+      <h2 class="sec-heading" contenteditable="true">Implementación de MPI en LAMMPS y su Contribución al Proyecto</h2>
+      <div class="sec-line"></div>
+    </div>
+
+    <section class="mpi-grid">
+      <!-- Izquierda: Imágenes Oficiales de Particionamiento MPI en LAMMPS -->
+      <article class="visual-card gold-top">
+        <h3 class="card-title" contenteditable="true">Descomposición Espacial de Dominios y Balanceo MPI</h3>
+        <p class="card-text" contenteditable="true">
+          LAMMPS divide la caja 3D en subdominios geométricos asignados a cada proceso de <code>MPI_COMM_WORLD</code>. Cada rango administra sus <strong>átomos propios</strong> y recibe copias de <strong>átomos fantasma (ghost atoms)</strong> en su frontera.
+        </p>
+        <div class="domain-images-row">
+          <div class="domain-figure">
+            <img src="assets/balance_uniform.jpg" alt="Partición MPI Brick Uniforme en LAMMPS" />
+            <div class="domain-caption" contenteditable="true">Partición MPI "Brick" (16 Ranks)</div>
+            <div class="domain-sub" contenteditable="true">Malla regular 3D (<code>comm_style brick</code>): ideal para densidad uniforme, pero desbalanceada con vacío.</div>
+          </div>
+          <div class="domain-figure">
+            <img src="assets/balance_rcb.jpg" alt="Partición MPI Tiled RCB en LAMMPS" />
+            <div class="domain-caption" contenteditable="true">Balanceo Dinámico MPI "Tiled RCB"</div>
+            <div class="domain-sub" contenteditable="true">Bisección recursiva (<code>balance rcb</code>): ajusta fronteras MPI para igualar átomos por procesador.</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Derecha: Flujo de Comunicación MPI y Campo de Esfuerzos -->
+      <article class="visual-card">
+        <div class="card-img-wrap" style="height: 100px;">
+          <img src="assets/dislocation.jpg" alt="Campo de Esfuerzos Calculado en Paralelo con LAMMPS" />
+          <span class="img-tag">Cálculo Distribuido de Fuerzas</span>
+        </div>
+        <h3 class="card-title" contenteditable="true">Ciclo de Paso de Mensajes MPI por Δt</h3>
+        <div class="pipeline-list">
+          <div class="pipe-step">
+            <span class="pipe-code" contenteditable="true">MPI_Irecv / MPI_Send</span>
+            <div class="pipe-title" contenteditable="true">1. Intercambio Halo</div>
+            <p class="pipe-desc" contenteditable="true">Envía posiciones de <em>ghost atoms</em> a los 6 vecinos (N, S, E, O, Arriba, Abajo).</p>
+          </div>
+          <div class="pipe-step gold">
+            <span class="pipe-code" contenteditable="true">Reverse Comm (Newton)</span>
+            <div class="pipe-title" contenteditable="true">2. Suma de Fuerzas</div>
+            <p class="pipe-desc" contenteditable="true">Calcula pares fronterizos 1 sola vez y retorna fuerzas acumuladas.</p>
+          </div>
+          <div class="pipe-step gold">
+            <span class="pipe-code" contenteditable="true">Comm::exchange()</span>
+            <div class="pipe-title" contenteditable="true">3. Migración Atómica</div>
+            <p class="pipe-desc" contenteditable="true">Transfiere átomos que cruzan de un subdominio MPI a otro.</p>
+          </div>
+          <div class="pipe-step">
+            <span class="pipe-code" contenteditable="true">MPI_Allreduce / FFT</span>
+            <div class="pipe-title" contenteditable="true">4. Estado Global</div>
+            <p class="pipe-desc" contenteditable="true">Sincroniza energía, presión, temperatura y mallas PPPM.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- SECCIÓN 03: COMPARATIVA Y VENTAJAS DE MPI -->
+    <div class="sec-bar">
+      <div class="sec-num emerald">03</div>
+      <h2 class="sec-heading" contenteditable="true">Comparativa: Ventajas que MPI Aporta a LAMMPS</h2>
+      <div class="sec-line"></div>
+    </div>
+
+    <section class="advantages-grid">
+      <!-- Tabla Comparativa Concisa y Visual -->
+      <article class="visual-card" style="border-top-color: var(--accent-emerald);">
+        <h3 class="card-title" style="color:#34d399;" contenteditable="true">Sin MPI (Secuencial / 1 Nodo) vs. Con MPI en LAMMPS</h3>
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th contenteditable="true">Parámetro</th>
+              <th contenteditable="true">Sin MPI (Secuencial)</th>
+              <th contenteditable="true">Con MPI (Memoria Distribuida)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td contenteditable="true">Complejidad</td>
+              <td class="bad-cell" contenteditable="true">O(N) en 1 CPU; cuello de botella severo.</td>
+              <td class="good-cell" contenteditable="true">Cómputo O(N / P) y comunicación superficial O((N/P)<sup>2/3</sup>).</td>
+            </tr>
+            <tr>
+              <td contenteditable="true">Memoria RAM</td>
+              <td class="bad-cell" contenteditable="true">Limitada a 1 nodo (~10⁷ átomos máx.).</td>
+              <td class="good-cell" contenteditable="true">RAM distribuida agregada: escala a &gt;10¹⁰ átomos (miles de nodos).</td>
+            </tr>
+            <tr>
+              <td contenteditable="true">Tráfico de Red</td>
+              <td class="bad-cell" contenteditable="true">Replicar todo satura el bus O(N).</td>
+              <td class="good-cell" contenteditable="true">Solo comunica la cáscara fronteriza (relación Superficie/Volumen).</td>
+            </tr>
+            <tr>
+              <td contenteditable="true">Aceleración</td>
+              <td class="bad-cell" contenteditable="true">Restringida a núcleos locales.</td>
+              <td class="good-cell" contenteditable="true">Híbrido MPI + OpenMP / Kokkos / GPUs en supercomputadoras.</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <!-- Métricas y Escalabilidad -->
+      <article class="visual-card" style="border-top-color: var(--accent-emerald);">
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-num" contenteditable="true">O(N / P)</div>
+            <div class="kpi-txt" contenteditable="true">Escalabilidad Lineal de Cómputo</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-num" contenteditable="true">&gt;90%</div>
+            <div class="kpi-txt" contenteditable="true">Eficiencia en Escalado Débil</div>
+          </div>
+        </div>
+        <div class="speedup-box">
+          <div style="font-size:0.75rem; font-weight:700; color:#fff; margin-bottom:6px; display:flex; justify-content:space-between;">
+            <span contenteditable="true">Aceleración (Speedup) con Procesos MPI</span>
+            <span style="color:var(--accent-gold);" contenteditable="true">Escala HPC</span>
+          </div>
+          <div class="bar-item">
+            <span contenteditable="true">1 Rank</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:10%;"></div></div>
+            <span style="text-align:right;" contenteditable="true">1×</span>
+          </div>
+          <div class="bar-item">
+            <span contenteditable="true">64 Ranks</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:42%;"></div></div>
+            <span style="text-align:right; color:#6ee7b7;" contenteditable="true">60×</span>
+          </div>
+          <div class="bar-item">
+            <span contenteditable="true">512 Ranks</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:72%;"></div></div>
+            <span style="text-align:right; color:#6ee7b7;" contenteditable="true">465×</span>
+          </div>
+          <div class="bar-item">
+            <span contenteditable="true">4,096 Ranks</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:96%;"></div></div>
+            <span style="text-align:right; color:var(--accent-gold); font-weight:700;" contenteditable="true">3,580×</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- SECCIÓN 04: REFERENCIAS EN FORMATO IEEE Y APA -->
+    <div class="sec-bar">
+      <div class="sec-num indigo">04</div>
+      <h2 class="sec-heading" contenteditable="true">Referencias Bibliográficas (Formatos IEEE y APA)</h2>
+      <div class="sec-line"></div>
+    </div>
+
+    <footer class="refs-grid">
+      <div class="ref-box">
+        <div class="ref-title">
+          <span contenteditable="true">Formato IEEE</span>
+          <span class="badge" contenteditable="true">Estándar Ingeniería</span>
+        </div>
+        <ul class="ref-list">
+          <li contenteditable="true">[1] A. P. Thompson <em>et al.</em>, "LAMMPS - a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales," <em>Comput. Phys. Commun.</em>, vol. 271, p. 108171, Feb. 2022, doi: 10.1016/j.cpc.2021.108171.</li>
+          <li contenteditable="true">[2] S. Plimpton, "Fast Parallel Algorithms for Short-Range Molecular Dynamics," <em>J. Comput. Phys.</em>, vol. 117, no. 1, pp. 1–19, Mar. 1995, doi: 10.1006/jcph.1995.1039.</li>
+          <li contenteditable="true">[3] Sandia National Laboratories, "LAMMPS Documentation: Parallel partitioning and balance command," 2024. [En línea]. Disponible en: https://docs.lammps.org/balance.html</li>
+        </ul>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-title">
+          <span contenteditable="true">Formato APA (7.ª Edición)</span>
+          <span class="badge gold" contenteditable="true">Estándar Académico</span>
+        </div>
+        <ul class="ref-list">
+          <li contenteditable="true">• Thompson, A. P., Aktulga, H. M., Berger, R., Bolintineanu, D. S., Brown, W. M., Crozier, P. S., ... &amp; Plimpton, S. J. (2022). LAMMPS - a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales. <em>Computer Physics Communications</em>, <em>271</em>, 108171. https://doi.org/10.1016/j.cpc.2021.108171</li>
+          <li contenteditable="true">• Plimpton, S. (1995). Fast parallel algorithms for short-range molecular dynamics. <em>Journal of Computational Physics</em>, <em>117</em>(1), 1–19. https://doi.org/10.1006/jcph.1995.1039</li>
+          <li contenteditable="true">• Sandia National Laboratories. (2024). <em>LAMMPS Molecular Dynamics Simulator: Official Picture Gallery &amp; Parallel Partitioning</em>. https://www.lammps.org/</li>
+        </ul>
+      </div>
+    </footer>
+
+  </main>
+
+  <script>
+    let isEditable = true;
+    function toggleEditable() {
+      isEditable = !isEditable;
+      document.querySelectorAll('[contenteditable]').forEach(el => {
+        el.setAttribute('contenteditable', isEditable ? 'true' : 'false');
+      });
+      document.body.classList.toggle('editing-active', isEditable);
+      document.getElementById('toggleEditBtn').textContent = isEditable ? 'Bloquear Edición' : 'Habilitar Edición';
+      document.getElementById('statusText').textContent = isEditable
+        ? 'Modo Editable Activo (Haz clic en cualquier texto para editarlo)'
+        : 'Modo Vista Previa (Edición bloqueada)';
+      document.getElementById('statusDot').style.background = isEditable ? '#10b981' : '#f59e0b';
+    }
+  </script>
+</body>
+</html>
