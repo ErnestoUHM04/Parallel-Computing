@@ -6,7 +6,9 @@
 
 __global__ void SumaMatriz(int *A, int *B, int *C, int tam)
 {
-   printf("\nRealizando trabajo en el hilo (%d, %d)",threadIdx.x,threadIdx.y);
+   // Intenta no usar printf - llamadas al sistema desde funciones en paralelo
+   // Rompe el cómputo en paralelo y hace más lento el programa
+   //printf("\nRealizando trabajo en el hilo (%d, %d)",threadIdx.x,threadIdx.y); // usar solo para DEBUGG
    int n=threadIdx.x;
    int m=threadIdx.y;
    C[n+m*tam]=A[n+m*tam]+B[n+m*tam];
